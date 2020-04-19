@@ -7,8 +7,8 @@ inline void copy_uint16_t (uint8_t *dst, uint16_t src) {
 }
 
 inline void copy_uint64_t (uint8_t *dst, uint64_t src) {
-	memcpy(dst, &src, 8);
-	/*
+	//memcpy(dst, &src, 8);
+	
 	dst[0] = (src & 0xFF00000000000000) >> 56;
 	dst[1] = (src & 0x00FF000000000000) >> 48;
 	dst[2] = (src & 0x0000FF0000000000) >> 40;
@@ -17,7 +17,7 @@ inline void copy_uint64_t (uint8_t *dst, uint64_t src) {
 	dst[5] = (src & 0x0000000000FF0000) >> 16;
 	dst[6] = (src & 0x000000000000FF00) >> 8;
 	dst[7] = src &  0x00000000000000FF;
-	*/
+	
 }
 
 struct collectd_packet *collectd_init_packet(char *hostname, uint16_t len) {
