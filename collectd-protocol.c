@@ -1,14 +1,19 @@
 #include "collectd-protocol.h"
+/*
+   TODO: encryption, signing, esp-independent code (ESP_LOG, etc)
 
-/* ESP8266 will spit unaligned access otherwise if casting used */
-inline void copy_uint16_t (uint8_t *dst, uint16_t src) {
+*/
+
+
+/* ESP8266 will spit unaligned access otherwise if casting used 
+   memcpy can't be used also, due endianness issues
+*/
+inline static void copy_uint16_t (uint8_t *dst, uint16_t src) {
 	dst[0] = (src & 0xFF00) >> 8;
 	dst[1] = src & 0x00FF;
 }
 
-inline void copy_uint64_t (uint8_t *dst, uint64_t src) {
-	//memcpy(dst, &src, 8);
-	
+inline static void copy_uint64_t (uint8_t *dst, uint64_t src) {
 	dst[0] = (src & 0xFF00000000000000) >> 56;
 	dst[1] = (src & 0x00FF000000000000) >> 48;
 	dst[2] = (src & 0x0000FF0000000000) >> 40;
@@ -17,24 +22,31 @@ inline void copy_uint64_t (uint8_t *dst, uint64_t src) {
 	dst[5] = (src & 0x0000000000FF0000) >> 16;
 	dst[6] = (src & 0x000000000000FF00) >> 8;
 	dst[7] = src &  0x00000000000000FF;
-	
 }
 
 struct collectd_packet *collectd_init_packet(char *hostname, uint16_t len) {
 	struct collectd_packet *c = malloc(sizeof(struct collectd_packet));
+#ifdef EXTRA_SAFETY_CHECK
+	if (c == NULL)
+		return NULL;
+#endif	
 	uint32_t required_len = strlen(hostname) + 1 + 4;
 	c->current_offset = 0;
 	c->available_len = len;
 	c->buffer = NULL;
+#ifdef EXTRA_SAFETY_CHECK
 	if (required_len > c->available_len) {
 		free(c);
 		return NULL;
 	}
+#endif
 	c->buffer = malloc(len);
+#ifdef EXTRA_SAFETY_CHECK
 	if (c->buffer == NULL) {
 		free(c);
 		return NULL;
 	}
+#endif
 	copy_uint16_t(&c->buffer[c->current_offset], TYPE_HOST);
 	copy_uint16_t(&c->buffer[c->current_offset+2], required_len);
 	strcpy((char*)&c->buffer[c->current_offset+4], hostname);
@@ -43,14 +55,33 @@ struct collectd_packet *collectd_init_packet(char *hostname, uint16_t len) {
 	return c;
 };
 
+/* Reset existing packet for new packet crafting */
+int collectd_reset_packet(struct collectd_packet *c, char *hostname) {
+	uint32_t required_len = strlen(hostname) + 1 + 4;
+	c->available_len += c->current_offset;
+	c->current_offset = 0;
+#ifdef EXTRA_SAFETY_CHECK
+	if (required_len > c->available_len) {
+		return -1;
+	}
+#endif
+	copy_uint16_t(&c->buffer[c->current_offset], TYPE_HOST);
+	copy_uint16_t(&c->buffer[c->current_offset+2], required_len);
+	strcpy((char*)&c->buffer[c->current_offset+4], hostname);
+	c->current_offset += required_len;
+	c->available_len -= required_len;
+	return 0;
+}
+
 int collectd_add_numeric(struct collectd_packet *c, uint16_t type, int64_t value) {
 	uint32_t required_len = 12;
+#ifdef EXTRA_SAFETY_CHECK
 	if (c == NULL || c->buffer == NULL)
 		return -1;
+#endif
 	if (required_len > c->available_len) {
 		return -2;
 	}
-	//value = __bswap_64(value);
 	copy_uint16_t(&c->buffer[c->current_offset], type);
 	copy_uint16_t(&c->buffer[c->current_offset+2], required_len);
 	copy_uint64_t(&c->buffer[c->current_offset+4], value);
@@ -61,8 +92,10 @@ int collectd_add_numeric(struct collectd_packet *c, uint16_t type, int64_t value
 
 int collectd_add_string(struct collectd_packet *c, uint16_t type, char* value) {
 	uint32_t required_len = strlen(value) + 1 + 4;
+#ifdef EXTRA_SAFETY_CHECK
 	if (c == NULL || c->buffer == NULL)
-		return -1;	
+		return -1;
+#endif
 	if (required_len > c->available_len) {
 		return -1;
 	}
@@ -74,11 +107,13 @@ int collectd_add_string(struct collectd_packet *c, uint16_t type, char* value) {
 	return 0;	
 }
 
-/* STUB for now, TODO for future multiple values */
+/* STUB for now, TODO for handling multiple values */
 int collectd_add_values(struct collectd_packet *c, struct collectd_values *v) {
 	uint32_t required_len = 6 + v->number * 9;
+#ifdef EXTRA_SAFETY_CHECK
 	if (c == NULL || c->buffer == NULL)
-		return -1;	
+		return -1;
+#endif
 	if (required_len > c->available_len) {
 		return -1;
 	}
@@ -94,11 +129,13 @@ int collectd_add_values(struct collectd_packet *c, struct collectd_values *v) {
 int collectd_add_value(struct collectd_packet *c, uint8_t value_type, void *value_content) {
 	uint32_t required_len = 6 + 9;
 	uint16_t values_num = 1;
+#ifdef EXTRA_SAFETY_CHECK
 	if (c == NULL || c->buffer == NULL)
 		return -1;	
 	if (required_len > c->available_len) {
 		return -1;
 	}
+#endif
 	copy_uint16_t(&c->buffer[c->current_offset], TYPE_VALUES);
 	copy_uint16_t(&c->buffer[c->current_offset+2], required_len);
 	copy_uint16_t(&c->buffer[c->current_offset+4], values_num);

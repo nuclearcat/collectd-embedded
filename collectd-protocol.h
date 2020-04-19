@@ -19,6 +19,9 @@ extern "C" {
 #include "lwip/sys.h"
 #include <lwip/netdb.h>
 
+/* This will add some code size, but might reduce grey hair */
+#define EXTRA_SAFETY_CHECK
+
 #define TYPE_HOST 				0x0000
 #define TYPE_TIME 				0x0001
 #define TYPE_TIME_HR 			0x0008
@@ -52,6 +55,7 @@ struct collectd_values {
 };
 
 struct collectd_packet *collectd_init_packet(char *hostname, uint16_t len);
+int collectd_reset_packet(struct collectd_packet *c, char *hostname);
 int collectd_add_numeric(struct collectd_packet *c, uint16_t type, int64_t value);
 int collectd_add_string(struct collectd_packet *c, uint16_t type, char* value);
 int collectd_add_values(struct collectd_packet *c, struct collectd_values *v);
