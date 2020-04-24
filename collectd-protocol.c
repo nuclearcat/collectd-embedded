@@ -25,7 +25,7 @@ inline static void copy_uint64_t (uint8_t *dst, uint64_t src) {
 }
 
 struct collectd_packet *collectd_init_packet(char *hostname, uint16_t len) {
-	struct collectd_packet *c = malloc(sizeof(struct collectd_packet));
+	struct collectd_packet *c = (struct collectd_packet*) malloc(sizeof(struct collectd_packet));
 #ifdef EXTRA_SAFETY_CHECK
 	if (c == NULL)
 		return NULL;
@@ -40,7 +40,7 @@ struct collectd_packet *collectd_init_packet(char *hostname, uint16_t len) {
 		return NULL;
 	}
 #endif
-	c->buffer = malloc(len);
+	c->buffer = (uint8_t*)malloc(len);
 #ifdef EXTRA_SAFETY_CHECK
 	if (c->buffer == NULL) {
 		free(c);
@@ -147,7 +147,7 @@ int collectd_add_value(struct collectd_packet *c, uint8_t value_type, void *valu
 	return 0;	
 }
 
-
+#ifndef ARDUINO
 int send_packet (char *dst_ip, int dst_port, struct collectd_packet *c) {
 	int addr_family = AF_INET;
 	int ip_protocol = IPPROTO_IP;
@@ -172,6 +172,12 @@ int send_packet (char *dst_ip, int dst_port, struct collectd_packet *c) {
 	close(sock);
 	return 0;
 }
+#else
+// Sending UDP in arduino is different! It require C++, so it will be just stub
+int send_packet (char *dst_ip, int dst_port, struct collectd_packet *c) {
+	return 0;
+}
+#endif
 
 struct collectd_packet *collectd_free_packet(struct collectd_packet *c) {
 	if (c->buffer)

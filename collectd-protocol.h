@@ -4,6 +4,13 @@ extern "C" {
 #include <string.h>
 #include <sys/param.h>
 #include <errno.h>
+
+#include <lwip/err.h>
+#include <lwip/sockets.h>
+#include <lwip/sys.h>
+#include <lwip/netdb.h>
+
+#ifndef ARDUINO
 #include <freertos/FreeRTOS.h>
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
@@ -12,12 +19,10 @@ extern "C" {
 #include "esp_event_loop.h"
 #include "esp_log.h"
 #include "nvs_flash.h"
-
-//#include "lwipopts.h"
-#include "lwip/err.h"
-#include <lwip/sockets.h>
-#include "lwip/sys.h"
-#include <lwip/netdb.h>
+#else
+#include <stdint.h>
+#include <sntp.h>
+#endif
 
 /* This will add some code size, but might reduce grey hair */
 #define EXTRA_SAFETY_CHECK
